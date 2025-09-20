@@ -8,7 +8,7 @@
     body{font-family:system-ui,Arial;direction:rtl;padding:16px;background:#f7f7fb;color:#111}
     h1{font-size:22px;margin-bottom:8px}
     label{display:block;margin:8px 0 4px}
-    input,button{font-size:14px;padding:8px;margin-top:4px}
+    input,button{font-size:14px;padding:8px;margin-top:4px;cursor:pointer}
     #preview,#original{border:1px solid #ddd;background:#fff;display:block;margin-top:12px;max-width:100%}
     .row{margin-bottom:12px}
     .controls{display:flex;flex-wrap:wrap;gap:12px}
@@ -44,7 +44,10 @@
   <div class="row">
     <label>المخطط الناتج:</label>
     <img id="preview" alt="preview" />
-    <button id="downloadBtn" style="display:none">⬇️ تحميل المخطط</button>
+    <div>
+      <button id="downloadSvgBtn" style="display:none">⬇️ تحميل SVG</button>
+      <button id="downloadCsvBtn" style="display:none">⬇️ تحميل CSV</button>
+    </div>
   </div>
 
   <h2>📂 المخططات المحفوظة</h2>
@@ -87,6 +90,18 @@
       svg+="</svg>";
       const csv="x,y\n0,0"; 
       return {svg,csv};
+    }
+
+    // دالة لإجبار التنزيل
+    function forceDownload(blob, filename){
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");
+      a.style.display="none";
+      a.href=url;
+      a.download=filename;
+      document.body.appendChild(a);
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     const fileInput=document.getElementById('imgfile');
@@ -152,21 +167,26 @@
       });
     }
 
+    let svgBlob, csvBlob;
+
     document.getElementById('convert').addEventListener('click',async()=>{
       if(!lastImg){alert('اختر صورة أولاً');return;}
       const cellSize=parseInt(document.getElementById('cellSize').value)||8;
       const out=await convertImage(lastImg,cellSize);
-      const svgBlob=new Blob([out.svg],{type:'image/svg+xml'});
-      const csvBlob=new Blob([out.csv],{type:'text/csv'});
+      svgBlob=new Blob([out.svg],{type:'image/svg+xml'});
+      csvBlob=new Blob([out.csv],{type:'text/csv'});
       const svgUrlLocal=URL.createObjectURL(svgBlob);
 
       // المعاينة
       document.getElementById('preview').src=svgUrlLocal;
 
-      // زر التحميل (يفتح الملف في المتصفح الخارجي)
-      const dlBtn=document.getElementById('downloadBtn');
-      dlBtn.onclick=()=>{ window.open(svgUrlLocal,'_blank'); };
-      dlBtn.style.display="inline-block";
+      // إظهار أزرار التنزيل
+      document.getElementById('downloadSvgBtn').style.display="inline-block";
+      document.getElementById('downloadCsvBtn').style.display="inline-block";
+
+      // ربط أزرار التنزيل
+      document.getElementById('downloadSvgBtn').onclick=()=>forceDownload(svgBlob,"pattern.svg");
+      document.getElementById('downloadCsvBtn').onclick=()=>forceDownload(csvBlob,"pattern.csv");
 
       // الرفع إلى Firebase
       const {svgUrl,csvUrl} = await savePattern(svgBlob,csvBlob);
@@ -180,4 +200,4 @@
     loadPatterns();
   </script>
 </body>
-      </html>
+</html>
